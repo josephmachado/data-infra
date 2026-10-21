@@ -2,4 +2,7 @@
 
 Infrastructure repo for courses 
 
-1. [Spark For Data Engineers]() at [./spark-for-data-engineers/](./spark-for-data-engineers/)
+## Spark for Data Engineers 
+
+Course link: [Spark For Data Engineers](https://courses.startdataengineering.com/courses/spark-for-data-engineers) 
+Repo at: [./spark-for-data-engineers/](./spark-for-data-engineers/)
