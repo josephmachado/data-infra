@@ -1,0 +1,171 @@
+<svg viewBox="0 0 800 700" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="400" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    Spark Executor: Reading Too Many Small Files
+  </text>
+  
+  <!-- Storage Layer -->
+  <g id="storage">
+    <text x="400" y="70" font-size="16" font-weight="bold" text-anchor="middle" fill="#34495e">Storage (HDFS/S3) - 10,000 tiny files (1 MB each)</text>
+    
+    <!-- Many Small Files -->
+    <g id="small-files">
+      <!-- Row 1 -->
+      <rect x="50" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="70" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="90" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="110" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="130" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="150" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="170" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="190" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <text x="210" y="105" font-size="12" fill="#7f8c8d">...</text>
+      
+      <!-- Row 2 -->
+      <rect x="250" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="270" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="290" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="310" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="330" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="350" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="370" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="390" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <text x="410" y="105" font-size="12" fill="#7f8c8d">...</text>
+      
+      <!-- Row 3 -->
+      <rect x="450" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="470" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="490" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="510" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="530" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="550" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="570" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <rect x="590" y="90" width="15" height="20" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+      <text x="610" y="105" font-size="12" fill="#7f8c8d">...</text>
+      
+      <text x="700" y="105" font-size="14" font-weight="bold" fill="#e74c3c">× 10,000 files!</text>
+    </g>
+  </g>
+  
+  <!-- Arrow down -->
+  <path d="M 400 115 L 400 165" stroke="#7f8c8d" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="490" y="145" font-size="12" fill="#e74c3c" font-weight="bold">10,000 tasks needed!</text>
+  
+  <!-- Executor Box -->
+  <rect x="40" y="180" width="720" height="280" fill="#ecf0f1" stroke="#95a5a6" stroke-width="3" rx="10"/>
+  <text x="400" y="210" font-size="18" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    Executor (8 cores available)
+  </text>
+  
+  <!-- CPU Cores - All busy but inefficient -->
+  <g id="cores">
+    <g transform="translate(80, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 1</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 1</text>
+    </g>
+    
+    <g transform="translate(170, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 2</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 2</text>
+    </g>
+    
+    <g transform="translate(260, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 3</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 3</text>
+    </g>
+    
+    <g transform="translate(350, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 4</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 4</text>
+    </g>
+    
+    <g transform="translate(440, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 5</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 5</text>
+    </g>
+    
+    <g transform="translate(530, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 6</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 6</text>
+    </g>
+    
+    <g transform="translate(620, 230)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 7</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 7</text>
+    </g>
+    
+    <g transform="translate(80, 310)">
+      <rect width="70" height="60" fill="#f39c12" stroke="#e67e22" stroke-width="2" rx="5"/>
+      <text x="35" y="20" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Core 8</text>
+      <text x="35" y="35" font-size="16" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="50" font-size="9" text-anchor="middle" fill="white">Task 8</text>
+    </g>
+  </g>
+  
+  <!-- Task Queue -->
+  <g transform="translate(170, 310)">
+    <rect width="520" height="60" fill="#e74c3c" stroke="#c0392b" stroke-width="2" rx="5"/>
+    <text x="260" y="25" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+      ⏳ Waiting Queue: 9,992 more tasks to process!
+    </text>
+    <text x="260" y="45" font-size="11" text-anchor="middle" fill="#ecf0f1">
+      Each task: Open file → Read 1 MB → Close file → Schedule next task
+    </text>
+  </g>
+  
+  <!-- Overhead Visualization -->
+  <g transform="translate(80, 390)">
+    <text x="280" y="0" font-size="14" font-weight="bold" fill="#c0392b">Each Task Timeline (Processing 1 MB file):</text>
+    
+    <!-- Task overhead bar -->
+    <rect x="0" y="10" width="150" height="30" fill="#e74c3c" stroke="#c0392b" stroke-width="2" rx="3"/>
+    <text x="75" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="white">Overhead: 200ms</text>
+    
+    <rect x="150" y="10" width="30" height="30" fill="#27ae60" stroke="#229954" stroke-width="2" rx="3"/>
+    <text x="165" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="white">10ms</text>
+    
+    <text x="200" y="30" font-size="12" fill="#2c3e50">← Actual data processing</text>
+    
+    <text x="290" y="55" font-size="11" fill="#c0392b" font-weight="bold">Overhead = 95% of time wasted!</text>
+  </g>
+  
+  <!-- Problems Box -->
+  <rect x="40" y="480" width="720" height="180" fill="#fff3cd" stroke="#ffc107" stroke-width="2" rx="5"/>
+  <text x="400" y="510" font-size="16" font-weight="bold" text-anchor="middle" fill="#856404">
+    Problems: "Small Files Problem"
+  </text>
+  
+  <g transform="translate(60, 525)">
+    <text x="0" y="0" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">Task Scheduling Overhead:</tspan> 10,000 tasks = massive scheduling cost</text>
+    <text x="0" y="20" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">File Open/Close Overhead:</tspan> Opening and closing files takes longer than reading</text>
+    <text x="0" y="40" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">Metadata Operations:</tspan> Driver must track 10,000 file paths and partitions</text>
+    <text x="0" y="60" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">Network Overhead:</tspan> Many small network requests instead of few large ones</text>
+    <text x="0" y="80" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">JVM Overhead:</tspan> Serialization/deserialization for each tiny task</text>
+    <text x="0" y="100" font-size="13" fill="#856404">⚠️ <tspan font-weight="bold">NameNode Pressure:</tspan> HDFS NameNode overwhelmed with metadata requests</text>
+  </g>
+  
+  <text x="400" y="645" font-size="12" font-weight="bold" text-anchor="middle" fill="#856404">
+    Solution: Compact/coalesce files to 128-256 MB each (e.g., 10 GB → 40-80 files instead of 10,000)
+  </text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7f8c8d"/>
+    </marker>
+  </defs>
+</svg>

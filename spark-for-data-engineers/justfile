@@ -1,0 +1,22 @@
+# List available commands
+default:
+    just --list
+
+# Docker compose up
+up:
+    docker compose up -d --build --scale spark-worker=2
+
+# Docker compose down
+down:
+    docker compose down -v
+
+sh:
+  docker exec -ti spark-master bash
+
+nb:
+  open http://localhost:8888/lab &
+
+# Restart docker containers
+restart:
+  just down 
+  just up

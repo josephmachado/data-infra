@@ -1,0 +1,160 @@
+services:
+  rest:
+    image: apache/iceberg-rest-fixture:1.10.1
+    container_name: iceberg-rest
+    env_file:
+      - .env
+    networks:
+      - iceberg_net
+    ports:
+      - 8181:8181
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+      - CATALOG_WAREHOUSE=s3://warehouse/
+      - CATALOG_IO__IMPL=org.apache.iceberg.aws.s3.S3FileIO
+      - CATALOG_S3_ENDPOINT=http://minio:9000
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password
+      - MINIO_DOMAIN=minio
+    env_file:
+      - .env
+    networks:
+      iceberg_net:
+        aliases:
+          - warehouse.minio
+    ports:
+      - 9001:9001
+      - 9000:9000
+    volumes:
+      - ./minio_data:/data
+    command: ["server", "/data", "--console-address", ":9001"]
+
+  mc:
+    depends_on:
+      - minio
+    image: minio/mc
+    container_name: mc
+    networks:
+      - iceberg_net
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    env_file:
+      - .env.spark
+      - .env
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://minio:9000 admin password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc ls minio/warehouse > /dev/null 2>&1 || /usr/bin/mc mb minio/warehouse;
+      /usr/bin/mc anonymous set public minio/warehouse;
+      tail -f /dev/null
+      "
+
+  spark-master:
+    container_name: spark-master
+    build:
+      context: .
+      target: spark-base
+    image: spark-image
+    entrypoint: ['./entrypoint.sh', 'master']
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - iceberg_net
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse:rw
+      - ./notebooks:/home/iceberg/notebooks:rw
+      - ./src:/home/iceberg/src:rw
+      - spark-logs:/home/iceberg/spark-events
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    env_file:
+      - .env.spark
+      - .env
+    ports:
+      - '8080:8080'
+      - '7077:7077'
+      - '8000:8000'
+
+  spark-worker:
+    image: spark-image
+#    container_name: spark-worker
+    entrypoint: ['./entrypoint.sh', 'worker']
+    depends_on:
+      - spark-master
+    networks:
+      - iceberg_net
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    env_file:
+      - .env.spark
+      - .env
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse:rw
+      - ./notebooks:/home/iceberg/notebooks:rw
+      - ./src:/home/iceberg/src:rw
+      - spark-logs:/home/iceberg/spark-events
+    # ports:
+      # - '8081:8081'
+
+  spark-history-server:
+    container_name: spark-history
+    image: spark-image
+    entrypoint: ['./entrypoint.sh', 'history']
+    depends_on:
+      - spark-master
+    networks:
+      - iceberg_net
+    env_file:
+      - .env.spark
+      - .env
+    volumes:
+      - spark-logs:/home/iceberg/spark-events
+    ports:
+      - '18080:18080'
+
+  spark-jupyter:
+    image: spark-jupyter
+    build:
+      context: .
+      target: jupyter-lab
+    container_name: spark-jupyter
+    entrypoint: ["/bin/notebook"]  # Add this to override inherited entrypoint
+    networks:
+      - iceberg_net
+    environment:
+      - AWS_ACCESS_KEY_ID=admin
+      - AWS_SECRET_ACCESS_KEY=password
+      - AWS_REGION=us-east-1
+    env_file:
+      - .env.spark
+      - .env
+    volumes:
+      - ./warehouse:/home/iceberg/warehouse:rw
+      - ./notebooks:/home/iceberg/notebooks:rw
+      - ./src:/home/iceberg/src:rw
+      - spark-logs:/home/iceberg/spark-events
+    ports:
+      - '8888:8888'
+      - "4040-4049:4040-4049"
+
+networks:
+  iceberg_net:
+
+volumes:
+  spark-logs:

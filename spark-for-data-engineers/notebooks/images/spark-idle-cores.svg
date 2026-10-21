@@ -1,0 +1,121 @@
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="400" y="30" font-size="24" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    Spark Executor: Reading 1 Large File
+  </text>
+  
+  <!-- Storage Layer -->
+  <g id="storage">
+    <text x="100" y="80" font-size="16" font-weight="bold" fill="#34495e">Storage (HDFS/S3)</text>
+    
+    <!-- Single Large File -->
+    <rect x="80" y="100" width="180" height="80" fill="#3498db" stroke="#2980b9" stroke-width="2" rx="5"/>
+    <text x="170" y="135" font-size="14" font-weight="bold" text-anchor="middle" fill="white">Large File</text>
+    <text x="170" y="155" font-size="12" text-anchor="middle" fill="white">10 GB</text>
+    <text x="170" y="170" font-size="11" text-anchor="middle" fill="#ecf0f1">(Indivisible)</text>
+  </g>
+  
+  <!-- Arrow down -->
+  <path d="M 170 180 L 170 230" stroke="#7f8c8d" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="180" y="210" font-size="12" fill="#7f8c8d">Read by 1 Task</text>
+  
+  <!-- Executor Box -->
+  <rect x="40" y="250" width="720" height="320" fill="#ecf0f1" stroke="#95a5a6" stroke-width="3" rx="10"/>
+  <text x="400" y="280" font-size="18" font-weight="bold" text-anchor="middle" fill="#2c3e50">
+    Executor (e.g., 8 cores available)
+  </text>
+  
+  <!-- CPU Cores -->
+  <g id="cores">
+    <!-- Core 1 - ACTIVE -->
+    <g transform="translate(80, 310)">
+      <rect width="70" height="70" fill="#27ae60" stroke="#229954" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 1</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">⚙️</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="white">ACTIVE</text>
+    </g>
+    
+    <!-- Cores 2-8 - IDLE -->
+    <g transform="translate(170, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 2</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(260, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 3</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(350, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 4</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(440, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 5</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(530, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 6</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(620, 310)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 7</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+    
+    <g transform="translate(80, 400)">
+      <rect width="70" height="70" fill="#95a5a6" stroke="#7f8c8d" stroke-width="2" rx="5"/>
+      <text x="35" y="25" font-size="12" font-weight="bold" text-anchor="middle" fill="white">Core 8</text>
+      <text x="35" y="45" font-size="20" text-anchor="middle" fill="white">💤</text>
+      <text x="35" y="62" font-size="10" text-anchor="middle" fill="#ecf0f1">IDLE</text>
+    </g>
+  </g>
+  
+  <!-- Task Box -->
+  <g transform="translate(170, 400)">
+    <rect width="520" height="70" fill="#e74c3c" stroke="#c0392b" stroke-width="2" rx="5"/>
+    <text x="260" y="25" font-size="14" font-weight="bold" text-anchor="middle" fill="white">
+      Task 1: Processing entire 10 GB file
+    </text>
+    <text x="260" y="45" font-size="12" text-anchor="middle" fill="white">
+      ⚠️ Only 1 task can run = Only 1 core utilized
+    </text>
+    <text x="260" y="62" font-size="11" text-anchor="middle" fill="#ecf0f1">
+      7 cores wasted (87.5% idle!)
+    </text>
+  </g>
+  
+  <!-- Stats Box -->
+  <rect x="40" y="490" width="720" height="80" fill="#fff3cd" stroke="#ffc107" stroke-width="2" rx="5"/>
+  <text x="400" y="515" font-size="14" font-weight="bold" text-anchor="middle" fill="#856404">
+    Problem: Poor Parallelism
+  </text>
+  <text x="400" y="535" font-size="12" text-anchor="middle" fill="#856404">
+    • CPU Utilization: 12.5% (1 out of 8 cores)
+  </text>
+  <text x="400" y="552" font-size="12" text-anchor="middle" fill="#856404">
+    • Solution: Split into multiple smaller files (128 MB blocks) for parallel processing
+  </text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#7f8c8d"/>
+    </marker>
+  </defs>
+</svg>
