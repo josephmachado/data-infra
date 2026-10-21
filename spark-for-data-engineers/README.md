@@ -12,7 +12,10 @@ docker compose up --build -d --scale spark-worker=2
 sleep 30
 ```
 
-add: WSL 
+
+**Windows users**: please setup WSL and a local Ubuntu Virtual machine following **[the instructions here](https://ubuntu.com/tutorials/install-ubuntu-on-wsl2-on-windows-10#1-overview)**. 
+
+Install the above prerequisites on your ubuntu terminal; if you have trouble installing docker, follow **[the steps here](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-22-04#step-1-installing-docker)** (only Step 1 is necessary). 
 
 Open Jupyter lab at **[http://localhost:8888/lab/](http://localhost:8888/lab/)**.
 
@@ -38,7 +41,6 @@ Stop containers with
 docker compose down -v
 sudo rm -rf ./minio_data/*
 sudo rm -rf ./notebooks/data/*
-sudo rm -rf ./notebooks/notebooks_with_answers/data/*
 ```
 
 ## Licensing & Attribution
