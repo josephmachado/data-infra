@@ -232,3 +232,9 @@ minio_data/*
 */data/* 
 */minio_data/*
 spark-for-data-engineers/notebooks/data/*
+
+.Trash**/*
+
+
+*.venv* 
+*.ipynb_checkpoints*

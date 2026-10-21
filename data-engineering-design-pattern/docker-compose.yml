@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  airflow-spark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        AIRFLOW_UID: ${UID:-1000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    image: sde-decourse-airflow-spark
+    container_name: airflow-spark
+    ports:
+      - "8080:8080"   # Airflow webserver
+      - "8888:8888"   # Jupyter Lab
+      - "4040-4049:4040-4049" # Spark UI
+      - '18080:18080' # Spark History Server
+    volumes:
+      - ./airflow/dags:/home/airflow/airflow/dags
+      - ./notebooks:/home/airflow/notebooks
+      - ./datagen:/home/airflow/datagen
+      - ./README.md:/home/airflow/README.md
+
+  postgres:
+    container_name: postgres
+    image: postgres:18
+    environment:
+      POSTGRES_USER: dataengineer
+      POSTGRES_PASSWORD: datapipeline
+      POSTGRES_DB: ecommerce
+    # volumes:
+      # - ./data:/input_data
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "dataengineer" ]
+      interval: 5s
+      retries: 5
+    restart: always
+    ports:
+      - "5432:5432"
+
