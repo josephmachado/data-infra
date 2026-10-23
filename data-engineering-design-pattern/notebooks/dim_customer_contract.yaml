@@ -1,0 +1,289 @@
+# ============================================================
+# Data Contract: dim_customer
+# Standard: Open Data Contract Standard (ODCS) v3.1.0
+# https://bitol-io.github.io/open-data-contract-standard/latest/
+# ============================================================
+
+apiVersion: v3.1.0
+kind: DataContract
+
+# ----------------------------------------------------------
+# 1. Fundamentals — description, version, access
+# ----------------------------------------------------------
+id: a3f1c902-7d44-4e5a-b831-00d1e5c2f817
+name: dim_customer
+version: 1.0.0
+status: active
+domain: customer
+dataProduct: customer_360
+
+description:
+  purpose: >
+    Slowly Changing Dimension Type 2 (SCD2) table representing the full
+    historical state of customers and their associated addresses.
+    Each row represents one version of a customer record. When a customer
+    attribute changes upstream, the previous row is expired (is_current = FALSE)
+    and a new row is inserted. Deleted customers are soft-deleted.
+  limitations: >
+    - Only captures changes within the daily ETL window (start_date to end_date).
+    - Address data is stored as a nested array; downstream tools must support
+      complex/struct types.
+    - Not suitable for real-time use cases; latency is up to 24 hours.
+  usage: >
+    Use this table for historical customer analysis, point-in-time joins,
+    and customer segmentation. Always filter on is_current = TRUE for
+    the latest customer snapshot.
+
+tags:
+  - customer
+  - scd2
+  - dimension
+  - ecommerce
+
+# ----------------------------------------------------------
+# 2. Schema — definition & grain
+# ----------------------------------------------------------
+schema:
+  - name: dim_customer
+    physicalType: table
+    physicalName: local.warehouse.dim_customer
+    description: >
+      One row per version of a customer record.
+      Grain: one row per customer_id + valid_from (surrogate version key).
+    properties:
+
+      - name: customer_id
+        description: Natural key. Unique identifier for the customer from the source system.
+        logicalType: string
+        physicalType: string
+        required: true
+        primaryKey: false      # natural key, not surrogate
+
+      - name: email
+        description: Customer email address at the time of this version.
+        logicalType: string
+        physicalType: string
+        required: true
+
+      - name: full_name
+        description: Customer full name at the time of this version.
+        logicalType: string
+        physicalType: string
+        required: false
+
+      - name: phone
+        description: Customer phone number at the time of this version.
+        logicalType: string
+        physicalType: string
+        required: false
+
+      - name: status
+        description: Customer account status (e.g. active, inactive, churned).
+        logicalType: string
+        physicalType: string
+        required: true
+
+      - name: created_at
+        description: Timestamp when the customer was first created in the source system.
+        logicalType: timestamp
+        physicalType: timestamp
+        required: true
+
+      - name: updated_at
+        description: Timestamp of the most recent upstream change captured in this version.
+        logicalType: timestamp
+        physicalType: timestamp
+        required: true
+
+      - name: addresses
+        description: >
+          Array of customer addresses at the time of this version.
+          Each element contains is_default (boolean) and address (string — line1, city, state, country).
+        logicalType: array
+        physicalType: array<struct<is_default:boolean, address:string>>
+        required: false
+
+      - name: valid_from
+        description: >
+          SCD2 effective start timestamp for this version. Set to updated_at of the
+          upstream record at insert time.
+        logicalType: timestamp
+        physicalType: timestamp
+        required: true
+
+      - name: valid_to
+        description: >
+          SCD2 effective end timestamp for this version. NULL means this is the
+          current version. Set to the updated_at of the superseding record on expiry,
+          or to current_timestamp() on soft delete.
+        logicalType: timestamp
+        physicalType: timestamp
+        required: false
+
+      - name: is_current
+        description: >
+          Boolean flag. TRUE = this is the latest version of the customer record.
+          FALSE = this version has been superseded or soft-deleted.
+        logicalType: boolean
+        physicalType: boolean
+        required: true
+
+# ----------------------------------------------------------
+# 3. Data Quality
+# ----------------------------------------------------------
+quality:
+
+  # --- Table-level checks ---
+  - type: sql
+    description: No duplicate current records per customer_id.
+    dimension: uniqueness
+    severity: error
+    query: >
+      SELECT COUNT(*) AS violations
+      FROM local.warehouse.dim_customer
+      WHERE is_current = TRUE
+      GROUP BY customer_id
+      HAVING COUNT(*) > 1
+    mustBe: 0
+
+  - type: sql
+    description: Every current record must have a non-null email.
+    dimension: completeness
+    severity: error
+    query: >
+      SELECT COUNT(*) AS violations
+      FROM local.warehouse.dim_customer
+      WHERE is_current = TRUE AND email IS NULL
+    mustBe: 0
+
+  - type: sql
+    description: valid_from must be <= valid_to for expired records.
+    dimension: validity
+    severity: error
+    query: >
+      SELECT COUNT(*) AS violations
+      FROM local.warehouse.dim_customer
+      WHERE is_current = FALSE
+        AND valid_to IS NOT NULL
+        AND valid_from > valid_to
+    mustBe: 0
+
+  - type: sql
+    description: Current records must have valid_to = NULL.
+    dimension: consistency
+    severity: error
+    query: >
+      SELECT COUNT(*) AS violations
+      FROM local.warehouse.dim_customer
+      WHERE is_current = TRUE AND valid_to IS NOT NULL
+    mustBe: 0
+
+  - type: sql
+    description: >
+      Freshness check — the most recent updated_at among current records
+      should be within the last 25 hours (allowing for ETL window + buffer).
+    dimension: freshness
+    severity: warning
+    query: >
+      SELECT CASE
+        WHEN MAX(updated_at) >= current_timestamp() - INTERVAL 25 HOURS THEN 0
+        ELSE 1
+      END AS violations
+      FROM local.warehouse.dim_customer
+      WHERE is_current = TRUE
+    mustBe: 0
+
+# ----------------------------------------------------------
+# 4. Service-Level Agreement (SLA)
+# ----------------------------------------------------------
+slaProperties:
+
+  - property: latency
+    value: 24
+    unit: hours
+    description: >
+      dim_customer is refreshed once daily. Data should reflect all source
+      changes up to end_date within 24 hours of the pipeline run.
+    driver: operational
+
+  - property: availability
+    value: 99.5
+    unit: percent
+    description: >
+      The table should be queryable and consistent 99.5% of the time on a
+      monthly basis.
+    driver: analytics
+
+  - property: retention
+    value: 3
+    unit: years
+    description: >
+      Historical SCD2 versions are retained for 3 years before archival.
+    driver: regulatory
+
+  - property: frequency
+    value: 1
+    unit: day
+    description: Pipeline runs once per day (daily batch).
+    driver: operational
+
+# ----------------------------------------------------------
+# 5. Data Access — roles
+# ----------------------------------------------------------
+roles:
+  - role: reader
+    access: read
+    description: Default role. All authenticated users can query dim_customer.
+    users:
+      - group:all_users
+
+  - role: data_engineer
+    access: read_write
+    description: Data engineering team responsible for pipeline maintenance.
+    users:
+      - group:data_engineering
+
+  - role: data_owner
+    access: owner
+    description: Accountable owner for schema changes and contract amendments.
+    users:
+      - user:data_platform_lead
+
+# ----------------------------------------------------------
+# 6. Support & Communication
+# ----------------------------------------------------------
+support:
+  - channel: slack
+    url: https://yourcompany.slack.com/channels/de-help
+    name: "#de-help"
+    description: >
+      Primary support channel for questions, issues, and change notifications
+      related to dim_customer. Staffed by the Data Engineering team.
+    tool: Slack
+
+  - channel: email
+    url: mailto:data-engineering@yourcompany.com
+    name: Data Engineering Team
+    description: >
+      Email alias for non-urgent queries or formal change requests.
+
+# ----------------------------------------------------------
+# 7. Infrastructure / Servers
+# ----------------------------------------------------------
+servers:
+  - server: production
+    type: spark
+    description: Iceberg table managed by PySpark, served via the local warehouse catalog.
+    physicalSchema: local.warehouse
+    table: dim_customer
+    environment: production
+    format: iceberg
+
+  - server: source_postgres
+    type: postgresql
+    description: Source OLTP database from which customer data is extracted.
+    host: postgres
+    port: 5432
+    database: ecommerce
+    schema: public
+    environment: production

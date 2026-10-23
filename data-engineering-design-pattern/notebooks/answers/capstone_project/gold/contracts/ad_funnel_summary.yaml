@@ -1,0 +1,23 @@
+# contracts/ad_funnel_summary.yaml
+dataset: my_sparkdf/tmp_ad_funnel_summary
+
+columns:
+  - name: ad_group_id
+    data_type: string
+    checks:
+      - missing:
+  - name: event_date
+    data_type: date
+    checks:
+      - missing:
+
+checks:
+  - row_count:
+      threshold:
+        must_be_greater_than: 0
+  - failed_rows:
+      name: total_spend must be non-negative & CVR must be between 0 and 1
+      query: |
+        SELECT *
+        FROM tmp_ad_funnel_summary
+        WHERE total_spend < 0 AND (cvr < 0 OR cvr > 1)

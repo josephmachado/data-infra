@@ -1,102 +1,96 @@
 import pendulum
 from airflow.sdk import dag, task
 from pyspark.sql import Row, SparkSession
-
-from notebooks.bronze.customer import run as customer_run
-from notebooks.bronze.customer_address import run as customer_address_run
-from notebooks.bronze.order_lines import run as order_lines_run
-from notebooks.bronze.orders import run as orders_run
-from notebooks.bronze.payment import run as payment_run
-from notebooks.bronze.product import run as product_run
-from notebooks.bronze.product_attribute import run as product_attribute_run
-from notebooks.bronze.product_variant import run as product_variant_run
+from notebooks.capstone_project.bronze.ad_click import run as ad_click_run
+from notebooks.capstone_project.bronze.ad_conversion import run as ad_conversion_run
+from notebooks.capstone_project.bronze.ad_creative import run as ad_creative_run
+from notebooks.capstone_project.bronze.ad_group import run as ad_group_run
+from notebooks.capstone_project.bronze.ad_impression import run as ad_impression_run
+from notebooks.capstone_project.bronze.advertiser import run as advertiser_run
+from notebooks.capstone_project.bronze.campaign import run as campaign_run
 
 
 @dag(
-    dag_id="bronze_layer",
+    dag_id="capstone_bronze_layer",
     schedule="@hourly",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     catchup=False,
-    tags=["bronze"],
+    tags=["bronze", "capstone_project"],
 )
-def bronze_customer_pipeline():
+def bronze_capstone_pipeline():
     @task(retries=2, retry_delay=2)
-    def run_customer():
+    def run_ad_click():
         spark = (
-            SparkSession.builder.appName("run_customer")
+            SparkSession.builder.appName("run_ad_click")
             .master("local[*]")
             .getOrCreate()
         )
-        customer_run(spark)
+        ad_click_run(spark)
 
     @task(retries=2, retry_delay=2)
-    def run_customer_address():
+    def run_ad_conversion():
         spark = (
-            SparkSession.builder.appName("run_customer_address")
+            SparkSession.builder.appName("run_ad_conversion")
             .master("local[*]")
             .getOrCreate()
         )
-        customer_address_run(spark)
+        ad_conversion_run(spark)
 
     @task(retries=2, retry_delay=2)
-    def run_order_lines():
+    def run_ad_creative():
         spark = (
-            SparkSession.builder.appName("run_order_lines")
+            SparkSession.builder.appName("run_ad_creative")
             .master("local[*]")
             .getOrCreate()
         )
-        order_lines_run(spark)
+        ad_creative_run(spark)
 
     @task(retries=2, retry_delay=2)
-    def run_orders():
+    def run_ad_group():
         spark = (
-            SparkSession.builder.appName("run_orders").master("local[*]").getOrCreate()
-        )
-        orders_run(spark)
-
-    @task(retries=2, retry_delay=2)
-    def run_payment():
-        spark = (
-            SparkSession.builder.appName("run_payment").master("local[*]").getOrCreate()
-        )
-        payment_run(spark)
-
-    @task(retries=2, retry_delay=2)
-    def run_product_attribute():
-        spark = (
-            SparkSession.builder.appName("run_product_attribute")
+            SparkSession.builder.appName("run_ad_group")
             .master("local[*]")
             .getOrCreate()
         )
-        product_attribute_run(spark)
+        ad_group_run(spark)
 
     @task(retries=2, retry_delay=2)
-    def run_product_variant():
+    def run_ad_impression():
         spark = (
-            SparkSession.builder.appName("run_product_variant")
+            SparkSession.builder.appName("run_ad_impression")
             .master("local[*]")
             .getOrCreate()
         )
-        product_variant_run(spark)
+        ad_impression_run(spark)
 
     @task(retries=2, retry_delay=2)
-    def run_product():
+    def run_advertiser():
         spark = (
-            SparkSession.builder.appName("run_product").master("local[*]").getOrCreate()
+            SparkSession.builder.appName("run_advertiser")
+            .master("local[*]")
+            .getOrCreate()
         )
-        product_run(spark)
+        advertiser_run(spark)
+
+    @task(retries=2, retry_delay=2)
+    def run_campaign():
+        spark = (
+            SparkSession.builder.appName("run_campaign")
+            .master("local[*]")
+            .getOrCreate()
+        )
+        campaign_run(spark)
 
     # Listing them without dependencies = parallel execution
     [
-        run_customer(),
-        run_customer_address(),
-        run_order_lines(),
-        run_orders(),
-        run_payment(),
-        run_product_attribute(),
-        run_product_variant(),
-        run_product(),
+        run_ad_click(),
+        run_ad_conversion(),
+        run_ad_creative(),
+        run_ad_group(),
+        run_ad_impression(),
+        run_advertiser(),
+        run_campaign(),
     ]
 
 
-bronze_customer_pipeline()
+bronze_capstone_pipeline()

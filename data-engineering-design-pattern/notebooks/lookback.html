@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lookback Window Processing</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #020617; color: #e2e8f0; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="text/babel">
+
+const { useState } = React;
+
+const sourceData = {
+  D2: [{ id: "1", value: "val_1", created_at: "D1" }],
+  D3: [{ id: "1", value: "val_1", created_at: "D1" }, { id: "2", value: "val_2", created_at: "D2" }],
+  D4: [{ id: "1", value: "val_1", created_at: "D1" }, { id: "1_5", value: "val_1.5", created_at: "D1" }, { id: "2", value: "val_2", created_at: "D2" }, { id: "3", value: "val_3", created_at: "D3" }],
+};
+
+const targetStates = {
+  D2: [
+    { id: "1", value: "val_1", created_at: "D1", loaded_at: "D2", status: "new" },
+  ],
+  D3: [
+    { id: "1", value: "val_1", created_at: "D1", loaded_at: "D2", status: "existing" },
+    { id: "2", value: "val_2", created_at: "D2", loaded_at: "D3", status: "new" },
+  ],
+  D4_no_lookback: [
+    { id: "1", value: "val_1", created_at: "D1", loaded_at: "D2", status: "existing" },
+    { id: "2", value: "val_2", created_at: "D2", loaded_at: "D3", status: "existing" },
+    { id: "3", value: "val_3", created_at: "D3", loaded_at: "D4", status: "new" },
+    { id: "1_5", value: "val_1.5", created_at: "D1", loaded_at: "—", status: "missed" },
+  ],
+  D4_lookback: [
+    { id: "1", value: "val_1", created_at: "D1", loaded_at: "D2", status: "existing" },
+    { id: "2", value: "val_2", created_at: "D2", loaded_at: "D3", status: "existing" },
+    { id: "3", value: "val_3", created_at: "D3", loaded_at: "D4", status: "new" },
+    { id: "1_5", value: "val_1.5", created_at: "D1", loaded_at: "D4", status: "caught" },
+  ],
+};
+
+const statusConfig = {
+  existing: { bg: "#1e293b", border: "#475569", label: "existing",            dot: "#94a3b8" },
+  new:      { bg: "#052e16", border: "#16a34a", label: "inserted",            dot: "#4ade80" },
+  missed:   { bg: "#2d0a0a", border: "#991b1b", label: "MISSED",              dot: "#ef4444" },
+  caught:   { bg: "#2d1f00", border: "#d97706", label: "caught by lookback",  dot: "#fbbf24" },
+};
+
+const days = ["D1", "D2", "D3", "D4"];
+
+function WindowBar({ activeRange }) {
+  const start = days.indexOf(activeRange[0]);
+  const end   = days.indexOf(activeRange[1]);
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:"6px", marginTop:"8px" }}>
+      {days.map((d, i) => (
+        <React.Fragment key={d}>
+          <div style={{ height:"6px", width:"32px", borderRadius:"2px", background: i >= start && i < end ? "#3b82f6" : "#334155" }} />
+          <span style={{ fontSize:"10px", color:"#64748b" }}>{d}</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function OutputTable({ rows, title, subtitle, highlight }) {
+  return (
+    <div style={{ borderRadius:"12px", border:`1px solid ${highlight ? "#d97706" : "#334155"}`, overflow:"hidden", boxShadow: highlight ? "0 0 20px rgba(217,119,6,0.2)" : "none" }}>
+      <div style={{ padding:"10px 14px", background: highlight ? "rgba(120,53,15,0.4)" : "#1e293b", borderBottom:`1px solid ${highlight ? "#92400e" : "#334155"}` }}>
+        <div style={{ fontSize:"11px", fontWeight:"bold", color:"#e2e8f0" }}>{title}</div>
+        {subtitle && <div style={{ fontSize:"11px", color:"#94a3b8", marginTop:"2px" }}>{subtitle}</div>}
+      </div>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"11px", fontFamily:"inherit" }}>
+        <thead>
+          <tr>{["id","value","created_at","loaded_at",""].map(h => (
+            <th key={h} style={{ padding:"6px 10px", textAlign:"left", color:"#64748b", fontWeight:"normal", background:"rgba(15,23,42,0.6)" }}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const cfg = statusConfig[row.status];
+            return (
+              <tr key={i} style={{ background: cfg.bg, borderTop:"1px solid rgba(30,41,59,0.6)" }}>
+                <td style={{ padding:"6px 10px" }}>{row.id}</td>
+                <td style={{ padding:"6px 10px", color:"#94a3b8" }}>{row.value}</td>
+                <td style={{ padding:"6px 10px", color:"#64748b" }}>{row.created_at}</td>
+                <td style={{ padding:"6px 10px", color: row.status==="missed" ? "#ef4444" : "#cbd5e1", textDecoration: row.status==="missed" ? "line-through" : "none" }}>{row.loaded_at}</td>
+                <td style={{ padding:"6px 10px" }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:"4px", padding:"2px 8px", borderRadius:"999px", border:`1px solid ${cfg.border}`, background: cfg.bg, fontSize:"10px", color:"#cbd5e1" }}>
+                    <span style={{ width:"6px", height:"6px", borderRadius:"50%", background: cfg.dot }} />
+                    {cfg.label}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SourceTable({ rows, day }) {
+  return (
+    <div style={{ borderRadius:"10px", border:"1px solid #334155", overflow:"hidden" }}>
+      <div style={{ padding:"10px 14px", background:"#1e293b", borderBottom:"1px solid #334155" }}>
+        <div style={{ fontSize:"11px", fontWeight:"bold", color:"#e2e8f0" }}>source @ {day}</div>
+      </div>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:"11px", fontFamily:"inherit" }}>
+        <thead>
+          <tr>{["id","value","created_at"].map(h => (
+            <th key={h} style={{ padding:"6px 10px", textAlign:"left", color:"#64748b", fontWeight:"normal", background:"rgba(15,23,42,0.6)" }}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} style={{ background: row.id==="1_5" ? "rgba(120,53,15,0.3)" : "#0f172a", borderTop:"1px solid #1e293b" }}>
+              <td style={{ padding:"6px 10px", color: row.id==="1_5" ? "#fbbf24" : "#e2e8f0" }}>{row.id}</td>
+              <td style={{ padding:"6px 10px", color:"#94a3b8" }}>{row.value}</td>
+              <td style={{ padding:"6px 10px", color:"#64748b" }}>{row.created_at}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function App() {
+  const [activeTab, setActiveTab] = useState("d2");
+
+  return (
+    <div style={{ fontFamily:"JetBrains Mono, Fira Code, monospace", background:"#020617", minHeight:"100vh", padding:"24px", color:"#e2e8f0" }}>
+
+      <div style={{ marginBottom:"24px" }}>
+        <div style={{ fontSize:"11px", color:"#60a5fa", marginBottom:"4px" }}>// data engineering concept</div>
+        <h1 style={{ fontSize:"22px", fontWeight:"bold", color:"#fff", marginBottom:"4px" }}>Lookback Window Processing</h1>
+        <p style={{ fontSize:"13px", color:"#94a3b8" }}>How late-arriving data is handled with and without a lookback window</p>
+      </div>
+
+      <div style={{ display:"flex", gap:"4px", marginBottom:"24px", borderBottom:"1px solid #1e293b" }}>
+        {[["d2","D2 Run"],["d3","D3 Run"],["d4","D4 Run"]].map(([id, label]) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{
+            padding:"8px 16px", fontSize:"12px", fontFamily:"inherit", cursor:"pointer",
+            border: activeTab===id ? "1px solid #334155" : "1px solid transparent",
+            borderBottom: activeTab===id ? "1px solid #020617" : "1px solid transparent",
+            background: activeTab===id ? "#1e293b" : "transparent",
+            color: activeTab===id ? "#fff" : "#64748b", borderRadius:"6px 6px 0 0"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {activeTab === "d2" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+          <div>
+            <div style={{ fontSize:"11px", color:"#64748b", marginBottom:"8px" }}>// input</div>
+            <SourceTable rows={sourceData.D2} day="D2" />
+            <div style={{ borderRadius:"8px", border:"1px solid #1d4ed833", background:"#1d4ed811", padding:"10px 12px", marginTop:"12px" }}>
+              <div style={{ fontSize:"11px", color:"#60a5fa", fontWeight:"bold", marginBottom:"2px" }}>pipeline window</div>
+              <div style={{ fontSize:"11px", color:"#94a3b8" }}>Full load — all records</div>
+              <WindowBar activeRange={["D1","D2"]} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:"11px", color:"#64748b", marginBottom:"8px" }}>// output</div>
+            <OutputTable rows={targetStates.D2} title="target after D2 run" />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "d3" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+          <div>
+            <div style={{ fontSize:"11px", color:"#64748b", marginBottom:"8px" }}>// input</div>
+            <SourceTable rows={sourceData.D3} day="D3" />
+            <div style={{ borderRadius:"8px", border:"1px solid #1d4ed833", background:"#1d4ed811", padding:"10px 12px", marginTop:"12px" }}>
+              <div style={{ fontSize:"11px", color:"#60a5fa", fontWeight:"bold", marginBottom:"2px" }}>pipeline window</div>
+              <div style={{ fontSize:"11px", color:"#94a3b8" }}>Full load — all records</div>
+              <WindowBar activeRange={["D1","D3"]} />
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:"11px", color:"#64748b", marginBottom:"8px" }}>// output</div>
+            <OutputTable rows={targetStates.D3} title="target after D3 run" />
+          </div>
+        </div>
+      )}
+
+      {activeTab === "d4" && (
+        <div>
+          <div style={{ marginBottom:"16px" }}>
+            <div style={{ fontSize:"11px", color:"#64748b", marginBottom:"8px" }}>// input @ D4</div>
+            <SourceTable rows={sourceData.D4} day="D4" />
+          </div>
+          <div style={{ borderRadius:"10px", border:"1px solid rgba(217,119,6,0.5)", background:"rgba(120,53,15,0.1)", padding:"12px 16px", marginBottom:"16px" }}>
+            <div style={{ fontSize:"11px", color:"#fbbf24", fontWeight:"bold", marginBottom:"6px" }}>⚠ late-arriving data</div>
+            <p style={{ fontSize:"12px", color:"#cbd5e1", lineHeight:"1.6" }}>
+              Record <span style={{ color:"#fbbf24" }}>id=1_5</span> existed in source on D1 but was absent from D2 and D3 extracts.
+              Without lookback it is <span style={{ color:"#ef4444" }}>silently missed</span>. With a 7-day lookback the pipeline re-scans from D1 and <span style={{ color:"#fbbf24" }}>catches it</span>.
+            </p>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" }}>
+            <div>
+              <div style={{ borderRadius:"8px", border:"1px solid #ef444433", background:"#ef444411", padding:"10px 12px", marginBottom:"12px" }}>
+                <div style={{ fontSize:"11px", color:"#f87171", fontWeight:"bold" }}>❌ no lookback — window: D3 → D4</div>
+                <WindowBar activeRange={["D3","D4"]} />
+              </div>
+              <OutputTable rows={targetStates.D4_no_lookback} title="output — no lookback" subtitle="window: D3 → D4 only" />
+            </div>
+            <div>
+              <div style={{ borderRadius:"8px", border:"1px solid #d9770633", background:"#d9770611", padding:"10px 12px", marginBottom:"12px" }}>
+                <div style={{ fontSize:"11px", color:"#fbbf24", fontWeight:"bold" }}>✓ with 7d lookback — window: D1 → D4</div>
+                <WindowBar activeRange={["D1","D4"]} />
+              </div>
+              <OutputTable rows={targetStates.D4_lookback} title="output — with lookback" subtitle="window: D4-7d → D4" highlight={true} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+</script>
+</body>
+</html>

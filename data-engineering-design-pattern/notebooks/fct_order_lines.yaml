@@ -1,0 +1,16 @@
+dataset: my_sparkdf/tmp_fct_order_lines
+columns:
+  - name: order_id
+    data_type: string
+    checks:
+      - missing:
+checks:
+  - failed_rows:
+      query: |
+        SELECT 
+          tmp.cnt as tmp_fct_order_lines_count,
+          src.cnt as source_count
+        FROM 
+          (SELECT COUNT(*) as cnt FROM tmp_fct_order_lines) tmp,
+          (SELECT COUNT(*) as cnt FROM local.bronze.order_lines) src
+        WHERE tmp.cnt != src.cnt

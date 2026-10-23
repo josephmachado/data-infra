@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<style>
+  body { font-family: sans-serif; padding: 1rem; background: white; color: #111; }
+  button { padding: 6px 18px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; border-radius: 6px; background: white; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .cell {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 32px; border-radius: 6px; font-size: 13px; font-weight: 500;
+    border: 0.5px solid #ddd;
+    background: #f5f5f5;
+    color: #555;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+  }
+  .cell.l-ptr { background: #E6F1FB; border-color: #185FA5; color: #0C447C; }
+  .cell.r-ptr { background: #FAEEDA; border-color: #854F0B; color: #633806; }
+  .cell.both  { background: #EAF3DE; border-color: #3B6D11; color: #27500A; }
+  .cell.matched { background: #EAF3DE; border-color: #3B6D11; color: #27500A; opacity: 0.5; }
+  .ptr-label {
+    font-size: 11px; font-weight: 500; text-align: center;
+    height: 16px; line-height: 16px;
+  }
+  .ptr-label.l { color: #185FA5; }
+  .ptr-label.r { color: #854F0B; }
+  .ptr-label.b { color: #3B6D11; }
+  .ptr-label.empty { visibility: hidden; }
+  .status-pill {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+  }
+  .status-match  { background: #EAF3DE; color: #27500A; }
+  .status-done   { background: #EAF3DE; color: #27500A; }
+  .status-wait   { background: #f0f0f0; color: #555; }
+</style>
+
+<div style="padding: 1rem 0 0;">
+  <div style="font-size: 12px; color: #555; margin-bottom: 6px;">Cleaned string</div>
+  <div id="char-row" style="display: flex; gap: 3px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px;"></div>
+  <div id="ptr-row"  style="display: flex; gap: 3px; margin-top: 2px;"></div>
+
+  <div style="display: flex; align-items: center; gap: 16px; margin-top: 20px;">
+    <div style="font-size: 13px; color: #555;">
+      <span style="color: #185FA5; font-weight: 500;">l</span> = <span id="lval" style="font-weight:500; color: #111;">0</span>
+      &nbsp;&nbsp;
+      <span style="color: #854F0B; font-weight: 500;">r</span> = <span id="rval" style="font-weight:500; color: #111;">0</span>
+    </div>
+    <div id="compare-msg" style="font-size: 13px; color: #555; flex:1;"></div>
+    <div id="status-pill" class="status-pill status-wait">ready</div>
+  </div>
+
+  <div style="display: flex; gap: 8px; margin-top: 16px; align-items: center;">
+    <button onclick="prev()" id="btn-prev">&lt; prev</button>
+    <button onclick="next()" id="btn-next">next &gt;</button>
+    <button onclick="reset()" style="color: #555;">reset</button>
+    <span style="font-size: 12px; color: #999; margin-left: 4px;" id="step-count"></span>
+  </div>
+</div>
+
+<script>
+const raw = "A man, a plan, a canal: Panama";
+const cleaned = raw.split('').filter(c => /[a-zA-Z0-9]/.test(c)).map(c => c.toLowerCase()).join('');
+const n = cleaned.length;
+
+let step = 0;
+const steps = [];
+
+{
+  let l = 0, r = n - 1;
+  steps.push({ l, r, phase: 'start', match: null });
+  while (l < r) {
+    const match = cleaned[l] === cleaned[r];
+    steps.push({ l, r, phase: match ? 'match' : 'mismatch', match });
+    if (!match) { steps.push({ l, r, phase: 'done-false', match: false }); break; }
+    l++; r--;
+    steps.push({ l, r, phase: l >= r ? 'done-true' : 'moved', match: null });
+  }
+  if (steps[steps.length-1].phase === 'moved' || steps[steps.length-1].phase === 'start') {
+    steps.push({ l, r, phase: 'done-true', match: null });
+  }
+}
+
+const charRow = document.getElementById('char-row');
+const ptrRow  = document.getElementById('ptr-row');
+
+cleaned.split('').forEach((ch, i) => {
+  const d = document.createElement('div');
+  d.className = 'cell';
+  d.id = 'c' + i;
+  d.textContent = ch;
+  charRow.appendChild(d);
+  const p = document.createElement('div');
+  p.className = 'ptr-label empty';
+  p.id = 'p' + i;
+  p.style.width = '28px';
+  ptrRow.appendChild(p);
+});
+
+function render() {
+  const s = steps[step];
+  for (let i = 0; i < n; i++) {
+    const cell = document.getElementById('c' + i);
+    const ptr  = document.getElementById('p' + i);
+    cell.className = 'cell';
+    ptr.className = 'ptr-label empty';
+    ptr.textContent = '';
+
+    const prevMatchedL = steps.slice(0, step).some(st => st.phase === 'match' && st.l === i);
+    const prevMatchedR = steps.slice(0, step).some(st => st.phase === 'match' && st.r === i);
+    if (prevMatchedL || prevMatchedR) cell.classList.add('matched');
+
+    if (i === s.l && i === s.r) {
+      cell.className = 'cell both';
+      ptr.className = 'ptr-label b';
+      ptr.textContent = 'l=r';
+    } else if (i === s.l) {
+      cell.className = 'cell l-ptr';
+      ptr.className = 'ptr-label l';
+      ptr.textContent = 'l';
+    } else if (i === s.r) {
+      cell.className = 'cell r-ptr';
+      ptr.className = 'ptr-label r';
+      ptr.textContent = 'r';
+    }
+
+    if (s.phase === 'match' && (i === s.l || i === s.r)) {
+      cell.style.outline = '2px solid #3B6D11';
+    } else {
+      cell.style.outline = '';
+    }
+  }
+
+  document.getElementById('lval').textContent = s.l;
+  document.getElementById('rval').textContent = s.r;
+
+  const msg = document.getElementById('compare-msg');
+  const pill = document.getElementById('status-pill');
+
+  if (s.phase === 'start') {
+    msg.textContent = 'comparing from both ends';
+    pill.className = 'status-pill status-wait'; pill.textContent = 'start';
+    pill.style.background = ''; pill.style.color = '';
+  } else if (s.phase === 'match') {
+    msg.innerHTML = '<span style="font-family:monospace">"' + cleaned[s.l] + '"</span> == <span style="font-family:monospace">"' + cleaned[s.r] + '"</span> - match';
+    pill.className = 'status-pill status-match'; pill.textContent = 'match';
+    pill.style.background = ''; pill.style.color = '';
+  } else if (s.phase === 'mismatch') {
+    msg.innerHTML = '<span style="font-family:monospace">"' + cleaned[s.l] + '"</span> != <span style="font-family:monospace">"' + cleaned[s.r] + '"</span> - mismatch';
+    pill.className = 'status-pill'; pill.style.background='#FCEBEB'; pill.style.color='#791F1F'; pill.textContent = 'mismatch';
+  } else if (s.phase === 'moved') {
+    msg.textContent = 'both pointers moved inward';
+    pill.className = 'status-pill status-wait'; pill.textContent = 'next pair';
+    pill.style.background = ''; pill.style.color = '';
+  } else if (s.phase === 'done-true') {
+    msg.textContent = 'pointers met - all pairs matched';
+    pill.className = 'status-pill status-done'; pill.textContent = 'palindrome!';
+    pill.style.background = ''; pill.style.color = '';
+  } else if (s.phase === 'done-false') {
+    msg.textContent = 'early exit - not a palindrome';
+    pill.className = 'status-pill'; pill.style.background='#FCEBEB'; pill.style.color='#791F1F'; pill.textContent = 'not palindrome';
+  }
+
+  document.getElementById('step-count').textContent = 'step ' + (step + 1) + ' / ' + steps.length;
+  document.getElementById('btn-prev').disabled = step === 0;
+  document.getElementById('btn-next').disabled = step === steps.length - 1;
+}
+
+function next()  { if (step < steps.length - 1) { step++; render(); } }
+function prev()  { if (step > 0) { step--; render(); } }
+function reset() { step = 0; render(); }
+
+render();
+</script>

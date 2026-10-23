@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<style>
+  body { font-family: sans-serif; padding: 1rem; background: white; color: #111; }
+  button { padding: 6px 18px; font-size: 13px; cursor: pointer; border: 1px solid #ccc; border-radius: 6px; background: white; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  .grid-wrap { display: inline-flex; flex-direction: column; gap: 3px; margin: 12px 0; }
+  .grid-row { display: flex; gap: 3px; }
+  .cell {
+    width: 36px; height: 36px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500;
+    border: 1.5px solid #ddd;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    position: relative;
+  }
+  .cell.water   { background: #f0f4f8; color: #aaa; border-color: #dde3ea; }
+  .cell.unvisited { background: #fff8e6; color: #854F0B; border-color: #FAC775; }
+  .cell.visiting  { background: #FAC775; color: #412402; border-color: #854F0B; }
+  .cell.visited   { background: #C0DD97; color: #27500A; border-color: #3B6D11; }
+  .cell.current   { background: #378ADD; color: white;   border-color: #0C447C; outline: 3px solid #0C447C; outline-offset: 1px; }
+  .island-badge {
+    position: absolute; top: -6px; right: -6px;
+    width: 14px; height: 14px; border-radius: 50%;
+    font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    border: 1.5px solid white;
+  }
+  .status-pill { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+  .legend-dot  { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+  select { padding: 4px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 6px; background: white; }
+</style>
+
+<div style="padding: 1rem 0 0;">
+
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+    <label style="font-size:13px; color:#555;">Grid:</label>
+    <select id="grid-select" onchange="switchGrid()">
+      <option value="0">Grid 1 - 1 island</option>
+      <option value="1">Grid 2 - 3 islands</option>
+    </select>
+  </div>
+
+  <div id="grid-container" class="grid-wrap"></div>
+
+  <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin: 10px 0 8px;">
+    <div style="font-size:13px; color:#555;">
+      Islands found: <span id="island-count" style="font-weight:600; color:#111;">0</span>
+    </div>
+    <div style="font-size:13px; color:#555;">
+      Position: <span id="pos-lbl" style="font-family:monospace; font-weight:500; color:#111;">-</span>
+    </div>
+    <div id="status-pill" class="status-pill" style="background:#f0f0f0; color:#555;">ready</div>
+  </div>
+
+  <div id="msg" style="font-size:12px; color:#555; min-height:18px; margin-bottom:12px;"></div>
+
+  <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
+    <button onclick="prev()" id="btn-prev">&lt; prev</button>
+    <button onclick="next()" id="btn-next">next &gt;</button>
+    <button onclick="reset()">reset</button>
+    <button onclick="runToEnd()">run to end</button>
+    <span id="step-count" style="font-size:12px; color:#999;"></span>
+  </div>
+
+  <div style="display:flex; gap:14px; flex-wrap:wrap;">
+    <span style="font-size:11px; color:#555;"><span class="legend-dot" style="background:#f0f4f8; border:1px solid #dde3ea;"></span>water</span>
+    <span style="font-size:11px; color:#555;"><span class="legend-dot" style="background:#fff8e6; border:1px solid #FAC775;"></span>land (unvisited)</span>
+    <span style="font-size:11px; color:#555;"><span class="legend-dot" style="background:#378ADD; border:1px solid #0C447C;"></span>current (DFS)</span>
+    <span style="font-size:11px; color:#555;"><span class="legend-dot" style="background:#FAC775; border:1px solid #854F0B;"></span>in DFS stack</span>
+    <span style="font-size:11px; color:#555;"><span class="legend-dot" style="background:#C0DD97; border:1px solid #3B6D11;"></span>visited</span>
+  </div>
+</div>
+
+<script>
+const GRIDS = [
+  [["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]],
+  [["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]
+];
+
+const ISLAND_COLORS = [
+  { bg: '#C0DD97', border: '#3B6D11', text: '#27500A', badge: '#3B6D11' },
+  { bg: '#F5C4B3', border: '#993C1D', text: '#712B13', badge: '#993C1D' },
+  { bg: '#CECBF6', border: '#534AB7', text: '#3C3489', badge: '#534AB7' },
+];
+
+let currentGridIdx = 0;
+let steps = [];
+let step = 0;
+
+function buildSteps(grid) {
+  const ROWS = grid.length, COLS = grid[0].length;
+  const visited = Array.from({length: ROWS}, () => Array(COLS).fill(false));
+  const islandOf = Array.from({length: ROWS}, () => Array(COLS).fill(-1));
+  const steps = [];
+  let numIslands = 0;
+
+  steps.push({ type: 'init', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: null, msg: 'scanning grid for unvisited land cells' });
+
+  function copyV(v) { return v.map(r => [...r]); }
+
+  function dfs(r, c, islandId) {
+    const dirs = [];
+    if (r-1 >= 0)   dirs.push([r-1, c]);
+    if (r+1 < ROWS) dirs.push([r+1, c]);
+    if (c-1 >= 0)   dirs.push([r, c-1]);
+    if (c+1 < COLS) dirs.push([r, c+1]);
+
+    for (const [nr, nc] of dirs) {
+      if (!visited[nr][nc] && grid[nr][nc] === '1') {
+        visited[nr][nc] = true;
+        islandOf[nr][nc] = islandId;
+        steps.push({ type: 'dfs', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: [nr, nc], msg: 'DFS: [' + nr + ',' + nc + '] is land - marking visited, island ' + (islandId+1) });
+        dfs(nr, nc, islandId);
+      } else {
+        steps.push({ type: 'check', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: [r, c], checking: [nr, nc], msg: 'checking neighbor [' + nr + ',' + nc + ']: ' + (grid[nr][nc] === '0' ? 'water, skip' : visited[nr][nc] ? 'already visited, skip' : 'land!') });
+      }
+    }
+  }
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      steps.push({ type: 'scan', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: [r, c], msg: 'scanning [' + r + ',' + c + ']: ' + (grid[r][c] === '0' ? 'water' : visited[r][c] ? 'already visited' : 'unvisited land - new island!') });
+      if (!visited[r][c] && grid[r][c] === '1') {
+        numIslands++;
+        const islandId = numIslands - 1;
+        visited[r][c] = true;
+        islandOf[r][c] = islandId;
+        steps.push({ type: 'new-island', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: [r, c], msg: 'island ' + numIslands + ' found at [' + r + ',' + c + '] - starting DFS' });
+        dfs(r, c, islandId);
+        steps.push({ type: 'dfs-done', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: null, msg: 'DFS complete for island ' + numIslands });
+      }
+    }
+  }
+
+  steps.push({ type: 'done', visited: copyV(visited), islandOf: copyV(islandOf), numIslands, cur: null, msg: 'done - total islands: ' + numIslands });
+  return steps;
+}
+
+function switchGrid() {
+  currentGridIdx = parseInt(document.getElementById('grid-select').value);
+  reset();
+}
+
+function initSteps() {
+  steps = buildSteps(GRIDS[currentGridIdx]);
+  step = 0;
+}
+
+function renderGrid() {
+  const s = steps[step];
+  const grid = GRIDS[currentGridIdx];
+  const ROWS = grid.length, COLS = grid[0].length;
+  const container = document.getElementById('grid-container');
+  container.innerHTML = '';
+
+  for (let r = 0; r < ROWS; r++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'grid-row';
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = grid[r][c];
+
+      const isCur = s.cur && s.cur[0] === r && s.cur[1] === c;
+      const isChecking = s.checking && s.checking[0] === r && s.checking[1] === c;
+      const isVisited = s.visited[r][c];
+      const islandId = s.islandOf[r][c];
+
+      if (grid[r][c] === '0') {
+        cell.className = 'cell water';
+      } else if (isCur) {
+        cell.className = 'cell current';
+      } else if (isChecking) {
+        cell.className = 'cell visiting';
+      } else if (isVisited && islandId >= 0) {
+        const col = ISLAND_COLORS[islandId % ISLAND_COLORS.length];
+        cell.style.background = col.bg;
+        cell.style.borderColor = col.border;
+        cell.style.color = col.text;
+        const badge = document.createElement('div');
+        badge.className = 'island-badge';
+        badge.style.background = col.badge;
+        badge.style.color = 'white';
+        badge.textContent = islandId + 1;
+        cell.appendChild(badge);
+      } else {
+        cell.className = 'cell unvisited';
+      }
+
+      rowEl.appendChild(cell);
+    }
+    container.appendChild(rowEl);
+  }
+
+  document.getElementById('island-count').textContent = s.numIslands;
+  document.getElementById('pos-lbl').textContent = s.cur ? '[' + s.cur[0] + ',' + s.cur[1] + ']' : '-';
+  document.getElementById('msg').textContent = s.msg;
+  document.getElementById('step-count').textContent = 'step ' + (step+1) + ' / ' + steps.length;
+
+  const pill = document.getElementById('status-pill');
+  if (s.type === 'done') {
+    pill.style.background = '#EAF3DE'; pill.style.color = '#27500A';
+    pill.textContent = 'done - ' + s.numIslands + ' island' + (s.numIslands !== 1 ? 's' : '');
+  } else if (s.type === 'new-island') {
+    pill.style.background = '#FAEEDA'; pill.style.color = '#633806';
+    pill.textContent = 'new island!';
+  } else if (s.type === 'dfs' || s.type === 'check') {
+    pill.style.background = '#E6F1FB'; pill.style.color = '#0C447C';
+    pill.textContent = 'DFS';
+  } else {
+    pill.style.background = '#f0f0f0'; pill.style.color = '#555';
+    pill.textContent = 'scanning';
+  }
+
+  document.getElementById('btn-prev').disabled = step === 0;
+  document.getElementById('btn-next').disabled = step === steps.length - 1;
+}
+
+function next()     { if (step < steps.length-1) { step++; renderGrid(); } }
+function prev()     { if (step > 0) { step--; renderGrid(); } }
+function reset()    { initSteps(); renderGrid(); }
+function runToEnd() { step = steps.length - 1; renderGrid(); }
+
+initSteps();
+renderGrid();
+</script>

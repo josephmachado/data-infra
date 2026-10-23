@@ -1,0 +1,21 @@
+# contracts/ad_campaign_performance.yaml
+dataset: my_sparkdf/tmp_ad_campaign_perf
+columns:
+  - name: campaign_id
+    data_type: string
+    checks:
+      - missing:
+  - name: event_date
+    data_type: date
+    checks:
+      - missing:
+checks:
+  - row_count:
+      threshold:
+        must_be_greater_than: 0
+  - failed_rows:
+      name: total_spend and roas must be non-negative
+      query: |
+        SELECT *
+        FROM tmp_ad_campaign_perf
+        WHERE total_spend < 0 and roas < 0

@@ -1,0 +1,23 @@
+dataset: my_sparkdf/tmp_customer
+columns:
+  - name: customer_id
+    data_type: string
+    checks:
+      - missing:
+  - name: email
+    data_type: string
+    checks:
+      - missing:
+      - failed_rows:
+          query: |
+            SELECT * FROM tmp_customer WHERE email NOT RLIKE '^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$'
+checks:
+  - failed_rows:
+      query: |
+        SELECT 
+          tmp.cnt as tmp_customer_count,
+          src.cnt as source_count
+        FROM 
+          (SELECT COUNT(*) as cnt FROM tmp_customer) tmp,
+          (SELECT COUNT(*) as cnt FROM local.bronze.customer) src
+        WHERE tmp.cnt != src.cnt
