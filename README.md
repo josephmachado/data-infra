@@ -9,5 +9,5 @@ Repo at: [./spark-for-data-engineers/](./spark-for-data-engineers/)
 
 ## Data Engineering Design Pattern
 
-Course link: [Data Engineering Design Pattern]()
+Course link: [Data Engineering Design Pattern](https://courses.startdataengineering.com/courses/data-engineering-design-pattern) 
 Repo at: [./data-engineering-design-pattern/](./data-engineering-design-pattern/)
