@@ -29,24 +29,5 @@ Once you are done, stop the containers with the following command.
 
 ```bash
 docker compose down -v
-
-## Package
-
-```bash 
-
-rm -f archive.zip
-zip -r archive.zip . \
-  -x "*.git/*" -x ".git/*" \
-  -x "*.minio.sys/*" -x ".minio.sys/*" \
-  -x "*.Trash-*/*" -x ".Trash-*/*" \
-  -x "*.ipynb_checkpoints/*" -x ".ipynb_checkpoints/*" \
-  -x "*__pycache__/*" \
-  -x "__pycache__/*" \
-  -x "*.pytest_cache*" \
-  -x "*venv*" \
-
-
-
-
 ```
-```
+
